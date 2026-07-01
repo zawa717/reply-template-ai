@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>クライアント対応AI — 状況に応じた返信テンプレを自動生成</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #ea580c;
+  --primary-dark: #9a3412;
+  --accent: #f472b6;
+  --accent2: #fbbf24;
+  --gray: #fff7ed;
+  --text: #2b1810;
+  --muted: #78716c;
+}
+body {
+  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', sans-serif;
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.hero {
+  background: linear-gradient(135deg, #431407 0%, #9a3412 50%, #be185d 100%);
+  color: white;
+  text-align: center;
+  padding: 70px 20px 90px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 20%, rgba(244,114,182,0.35) 0%, transparent 55%),
+              radial-gradient(ellipse at 85% 15%, rgba(234,88,12,0.4) 0%, transparent 50%),
+              radial-gradient(ellipse at 60% 90%, rgba(251,191,36,0.2) 0%, transparent 40%);
+}
+.hero-badge {
+  display: inline-block;
+  background: rgba(244,114,182,0.15);
+  border: 1px solid rgba(244,114,182,0.5);
+  color: #fbcfe8;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 24px;
+  position: relative;
+}
+.hero h1 {
+  font-size: clamp(28px, 6vw, 54px);
+  font-weight: 900;
+  line-height: 1.3;
+  margin-bottom: 20px;
+  position: relative;
+}
+.hero h1 .em { color: var(--accent2); }
+.hero h1 .em2 { color: #fbcfe8; }
+.hero p {
+  font-size: 17px;
+  color: rgba(255,255,255,0.85);
+  max-width: 560px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+.price-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  position: relative;
+  flex-wrap: wrap;
+}
+.price-tag {
+  background: linear-gradient(135deg, var(--accent2), #d97706);
+  color: white;
+  font-size: 22px;
+  font-weight: 900;
+  padding: 8px 28px;
+  border-radius: 50px;
+}
+.price-note { color: rgba(255,255,255,0.65); font-size: 14px; }
+.cta-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent), #db2777);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 18px 52px;
+  border-radius: 50px;
+  text-decoration: none;
+  box-shadow: 0 8px 32px rgba(244,114,182,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.cta-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(244,114,182,0.5); }
+
+.section { padding: 72px 20px; }
+.container { max-width: 920px; margin: 0 auto; }
+.section-title {
+  text-align: center;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 800;
+  margin-bottom: 48px;
+  line-height: 1.3;
+}
+.section-title span { color: var(--primary); }
+.section-title .em { color: var(--accent); }
+
+/* Pain points */
+.pain-section { background: var(--gray); }
+.pain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+.pain-card {
+  background: white;
+  border-radius: 18px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 16px rgba(234,88,12,0.08);
+  border-left: 4px solid var(--accent);
+}
+.pain-icon { font-size: 30px; margin-bottom: 12px; }
+.pain-text { font-size: 15px; color: var(--muted); font-weight: 600; line-height: 1.7; }
+
+/* Features */
+.features { background: white; }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+.feature-card {
+  background: var(--gray);
+  border-radius: 20px;
+  padding: 28px 24px;
+  border-top: 3px solid var(--primary);
+}
+.feature-icon { font-size: 36px; margin-bottom: 14px; }
+.feature-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; color: var(--primary-dark); }
+.feature-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+/* Chat demo */
+.demo-section {
+  background: linear-gradient(135deg, #431407, #9a3412);
+  color: white;
+  padding: 72px 20px;
+}
+.demo-section .section-title { color: white; }
+.demo-section .section-title span { color: var(--accent2); }
+.chat-demo {
+  max-width: 420px;
+  margin: 0 auto;
+  background: #2b1810;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid rgba(244,114,182,0.3);
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 16px;
+}
+.chat-avatar { width: 44px; height: 44px; background: linear-gradient(135deg,var(--accent),var(--primary)); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.chat-name { font-weight: 700; font-size: 15px; }
+.chat-status { font-size: 12px; color: #fbbf24; }
+.bubble { margin-bottom: 12px; }
+.bubble.user { text-align: right; }
+.bubble-inner {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 18px;
+  font-size: 13px;
+  max-width: 90%;
+  line-height: 1.5;
+  text-align: left;
+}
+.bubble.user .bubble-inner { background: rgba(255,255,255,0.15); color: white; border-bottom-right-radius: 4px; }
+.bubble.bot .bubble-inner { background: rgba(244,114,182,0.25); color: white; border: 1px solid rgba(244,114,182,0.4); border-bottom-left-radius: 4px; }
+
+/* Pricing */
+.pricing-section { background: var(--gray); }
+.price-card {
+  max-width: 420px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 24px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(234,88,12,0.12);
+  border: 2px solid var(--primary);
+}
+.price-card .plan-name { font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 12px; }
+.price-card .plan-price { font-size: 48px; font-weight: 900; color: var(--primary-dark); }
+.price-card .plan-price span { font-size: 18px; font-weight: 500; color: var(--muted); }
+.price-card .plan-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.plan-list { list-style: none; text-align: left; margin-bottom: 28px; }
+.plan-list li { padding: 8px 0; font-size: 14px; color: var(--text); border-bottom: 1px solid var(--gray); }
+.plan-list li::before { content: '✓ '; color: var(--accent); font-weight: 900; }
+
+/* CTA */
+.cta-section { background: white; padding: 72px 20px; text-align: center; }
+.cta-box {
+  background: linear-gradient(135deg, #431407, #9a3412, #be185d);
+  border-radius: 28px;
+  padding: 56px 32px;
+  max-width: 600px;
+  margin: 0 auto;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.cta-box::before {
+  content: '💬';
+  position: absolute;
+  font-size: 120px;
+  opacity: 0.08;
+  top: -20px;
+  right: -20px;
+}
+.cta-box h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+.cta-box p { color: rgba(255,255,255,0.8); margin-bottom: 28px; font-size: 16px; }
+.mail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--accent2), #d97706);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 18px 52px;
+  border-radius: 50px;
+  text-decoration: none;
+  box-shadow: 0 8px 32px rgba(251,191,36,0.35);
+  transition: transform 0.2s;
+}
+.mail-btn:hover { transform: translateY(-3px); }
+.guarantee { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.55); }
+
+footer {
+  background: #431407;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  padding: 32px 20px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div style="position:relative">
+    <div class="hero-badge">💬 状況を選ぶだけで返信文が完成</div>
+    <h1>クライアント対応の<span class="em">気まずさ</span>を<br>AIが<span class="em2">スマートに解決</span></h1>
+    <p>納期遅延・追加料金交渉・お断りなど、言いづらいシーンでも角の立たない返信文をAIが自動生成。信頼関係を保ったまま対応できます。</p>
+    <div class="price-row">
+      <span class="price-tag">¥980/月〜</span>
+      <span class="price-note">初回5件まで無料お試し</span>
+    </div>
+    <a href="https://reply-template-jp.fly.dev/" target="_blank" class="cta-btn">無料で今すぐ試す（無料体験版）</a>
+  </div>
+</section>
+
+<!-- PAIN POINTS -->
+<section class="section pain-section">
+  <div class="container">
+    <h2 class="section-title">こんな<span class="em">お悩み</span>ありませんか？</h2>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon">😰</div>
+        <div class="pain-text">納期遅延や追加料金の相談を、どう切り出せばいいか分からない</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">💢</div>
+        <div class="pain-text">クレーム対応で感情的になり、関係が悪化してしまった経験がある</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">🙅</div>
+        <div class="pain-text">案件のお断りメールを送るたびに気まずくて何度も文面を悩む</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section features">
+  <div class="container">
+    <h2 class="section-title">クライアント対応AIの<span>できること</span></h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📂</div>
+        <div class="feature-title">シーン別テンプレート</div>
+        <div class="feature-desc">納期遅延・追加料金交渉・お断り・催促・クレーム対応など、状況を選ぶだけで最適な文面を生成。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎭</div>
+        <div class="feature-title">トーン調整機能</div>
+        <div class="feature-desc">丁寧・カジュアル・フォーマルなど、クライアントとの関係性に合わせて文体を自由に調整。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧘</div>
+        <div class="feature-title">感情を抑えた冷静な文面</div>
+        <div class="feature-desc">クレームや理不尽な要求にも、感情的にならず冷静かつプロフェッショナルな返信を自動作成。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <div class="feature-title">状況入力でカスタマイズ</div>
+        <div class="feature-desc">具体的な状況を一言入力するだけで、テンプレートを実際の案件に合わせて自動調整。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-title">お気に入り保存</div>
+        <div class="feature-desc">よく使う定型文をお気に入り登録し、次回から瞬時に呼び出して使い回し可能。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo-section">
+  <div class="container">
+    <h2 class="section-title">こんな<span>返信</span>が作れます</h2>
+    <div class="chat-demo">
+      <div class="chat-header">
+        <div class="chat-avatar">💬</div>
+        <div>
+          <div class="chat-name">クライアント対応AI</div>
+          <div class="chat-status">● シーン選択：納期遅延の相談</div>
+        </div>
+      </div>
+      <div class="bubble user">
+        <div class="bubble-inner">状況：体調不良で2日遅れそう</div>
+      </div>
+      <div class="bubble bot">
+        <div class="bubble-inner">いつも大変お世話になっております。誠に恐れ入りますが、体調不良のため誠実に品質を保つ観点から、納期を2日ほど調整いただけますでしょうか。ご迷惑をおかけし申し訳ございません。何卒よろしくお願いいたします。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section pricing-section">
+  <div class="container">
+    <h2 class="section-title">シンプルな<span class="em">料金プラン</span></h2>
+    <div class="price-card">
+      <div class="plan-name">スタンダードプラン</div>
+      <div class="plan-price">¥980<span>/月</span></div>
+      <div class="plan-sub">初回5件まで無料お試し</div>
+      <ul class="plan-list">
+        <li>シーン別テンプレート使い放題</li>
+        <li>トーン調整機能</li>
+        <li>お気に入り保存</li>
+        <li>状況入力カスタマイズ</li>
+        <li>いつでも解約OK</li>
+      </ul>
+      <a href="https://reply-template-jp.fly.dev/" target="_blank" class="cta-btn" style="display:block;padding:16px;font-size:16px;">無料で今すぐ試す（無料体験版）</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-box">
+    <h2>気まずいやり取りは<br>AIにお任せ</h2>
+    <p>先行登録者には正式リリース時に特典をご案内予定</p>
+    <a href="mailto:suico415@gmail.com?subject=クライアント対応AIについて" class="mail-btn">
+      ✉️ 先行登録・お問い合わせはこちら
+    </a>
+    <p class="guarantee">🔒 現在準備中。ご登録いただいた方へ優先案内いたします</p>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 クライアント対応AI — チャットテンプレート自動生成ツール</p>
+</footer>
+
+</body>
+</html>
